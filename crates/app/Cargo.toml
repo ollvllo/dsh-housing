@@ -1,0 +1,18 @@
+[package]
+name = "dsh-housing-app"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "dsh 胶囊启动器：免安装单文件 exe（core / tray 双角色）"
+
+# 单文件免安装：core 与 tray 共用这一个 bin，用 --role 区分（docs/structure.md §2.1）
+[[bin]]
+name = "dsh-housing"
+path = "src/main.rs"
+
+[dependencies]
+dsh-housing-core.workspace = true
+dsh-housing-tray.workspace = true
+
+[build-dependencies]
+embed-resource = "3.0.12"

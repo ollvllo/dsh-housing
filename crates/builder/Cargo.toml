@@ -1,0 +1,11 @@
+[package]
+name = "dsh-housing-builder"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "dsh-housing 可移植版本构建：参数校验 / node 引导 / app 安装 / 模板渲染 / 清单（核外业务单元）"
+
+[dependencies]
+# 只做纯逻辑与「要跑哪条命令」的决策；进程 spawn / Job Object / 日志环都在 core（docs/structure.md §3.24）
+serde.workspace = true
+serde_json.workspace = true

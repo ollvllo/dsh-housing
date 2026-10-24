@@ -1,0 +1,9 @@
+// dsh-housing 的 Windows 资源定义。
+//
+// 资源 ID = 1：
+//   · exe 在资源管理器 / 任务栏 / alt-tab 里的图标（RT_GROUP_ICON 的约定 ID）
+//   · 托盘图标也从这一个资源取（crates/tray 用 MAKEINTRESOURCEW(1)）
+// 也就是说 —— 换图标只改 `assets/favicon.ico` 这一个文件。
+//
+// 路径相对本文件所在目录（crates/app），所以指向仓库根下的 assets/。
+1 ICON "../../assets/favicon.ico"

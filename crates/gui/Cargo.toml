@@ -1,0 +1,19 @@
+[package]
+name = "dsh-housing-gui"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "dsh-housing 控制台：本地 HTTP + JSON API + 内嵌前端"
+
+[dependencies]
+# 依赖方向：core → gui（docs/structure.md §2.1）。本 crate 不认识 core。
+axum.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+include_dir.workspace = true
+
+[dev-dependencies]
+# 路由单测：用 tower 的 oneshot 直接调 Router，不真起 TCP。
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

@@ -1,0 +1,710 @@
+/* dsh-housing 控制台样式（无构建；只依赖系统字体）。 */
+
+:root {
+  color-scheme: dark;
+  --bg: #10141a;
+  --panel: #171c24;
+  --panel-2: #1d232d;
+  --border: #2a323d;
+  --text: #e6e9ef;
+  --muted: #8b95a6;
+  --accent: #4c8dff;
+  --ok: #3fb950;
+  --warn: #d29922;
+  --bad: #f85149;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[v-cloak] {
+  display: none;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.55 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.mono {
+  font-family: "Cascadia Mono", "Consolas", monospace;
+}
+
+.small {
+  font-size: 12px;
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  letter-spacing: 0.02em;
+}
+
+h2 small {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+code {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+/* ── 顶栏 ── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 14px 22px;
+  background: rgba(16, 20, 26, 0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(6px);
+}
+
+.brand {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.brand .sub {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pill.ok {
+  color: var(--ok);
+  border-color: rgba(63, 185, 80, 0.45);
+}
+
+.pill.bad {
+  color: var(--bad);
+  border-color: rgba(248, 81, 73, 0.45);
+}
+
+/* ── 横幅 ── */
+
+.banner {
+  margin: 12px 22px 0;
+  padding: 9px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.banner.error {
+  background: rgba(248, 81, 73, 0.12);
+  border-color: rgba(248, 81, 73, 0.5);
+  color: #ffb3ad;
+}
+
+.banner.notice {
+  background: rgba(63, 185, 80, 0.1);
+  border-color: rgba(63, 185, 80, 0.4);
+  color: #9ee7a8;
+}
+
+/* ── 布局 ── */
+
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 22px 60px;
+}
+
+.block {
+  margin-bottom: 30px;
+}
+
+.empty,
+.hint {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.hint {
+  margin: 0 0 10px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 260px;
+  flex: 1;
+}
+
+.key {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.alias-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  padding: 3px 6px;
+  min-width: 140px;
+  max-width: 260px;
+}
+
+.alias-input:hover,
+.alias-input:focus {
+  border-color: var(--border);
+  background: var(--panel-2);
+  outline: none;
+}
+
+.detail {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(210, 153, 34, 0.1);
+  border: 1px solid rgba(210, 153, 34, 0.35);
+  color: #e8c979;
+  font-size: 12.5px;
+}
+
+/* ── 状态徽标 ── */
+
+.badge {
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.badge.state-running {
+  color: var(--ok);
+  border-color: rgba(63, 185, 80, 0.45);
+  background: rgba(63, 185, 80, 0.1);
+}
+
+.badge.state-starting,
+.badge.state-stopping {
+  color: var(--warn);
+  border-color: rgba(210, 153, 34, 0.45);
+  background: rgba(210, 153, 34, 0.1);
+}
+
+.badge.state-failed {
+  color: var(--bad);
+  border-color: rgba(248, 81, 73, 0.45);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+/* ── 指标与动作 ── */
+
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pending {
+  color: var(--warn);
+  font-size: 12.5px;
+  border: 1px dashed rgba(210, 153, 34, 0.5);
+  border-radius: 999px;
+  padding: 1px 10px;
+}
+
+button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: transparent;
+}
+
+button.danger {
+  color: #ffb3ad;
+  border-color: rgba(248, 81, 73, 0.4);
+}
+
+button.danger:hover:not(:disabled) {
+  border-color: var(--bad);
+}
+
+button.small {
+  padding: 1px 8px;
+  font-size: 12px;
+}
+
+/* ── env 编辑 ── */
+
+.env {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.env-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.env-key {
+  flex: 0 0 240px;
+}
+
+.env-value {
+  flex: 1;
+}
+
+.env-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+input {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 9px;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── webhook（设置悬浮窗，v0.2 / #244） ── */
+
+.webhook .card-head {
+  align-items: flex-start;
+}
+
+.webhook .url-input {
+  flex: 1;
+  min-width: 300px;
+}
+
+.webhook .url-input.bad {
+  border-color: var(--danger, #c85858);
+}
+
+.webhook-triggers {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.webhook-trigger {
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+
+.webhook-trigger .trigger-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.webhook-trigger textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.webhook-trigger textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── 日志 ── */
+
+.logs {
+  margin-top: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.logs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-bottom: 8px;
+}
+
+.log-text {
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  background: #0c0f14;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── 胶囊区 ── */
+
+.capsule .title {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.warnings {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  color: #e8c979;
+  font-size: 12.5px;
+}
+
+table.config {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 12.5px;
+}
+
+table.config th,
+table.config td {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+table.config th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.remove {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.confirm-input {
+  width: 280px;
+}
+
+.register {
+  display: flex;
+  gap: 10px;
+}
+
+.register input {
+  flex: 1;
+}
+
+/* ── M4：端口编辑 / 开关 / 壳设置 ── */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.port-edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.port-input {
+  width: 110px;
+}
+
+.warn {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(210, 153, 34, 0.12);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  color: #e8c979;
+  font-size: 12.5px;
+}
+
+h3 {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 18px 0 8px;
+  color: var(--text);
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.settings label.wide {
+  grid-column: 1 / -1;
+}
+
+.settings label.toggle {
+  flex-direction: row;
+  align-items: center;
+}
+
+.settings label small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.settings input[type="number"],
+.settings input:not([type]) {
+  width: 160px;
+}
+
+/* v0.4 / #286：控制台启动位置的快捷取值（与实例 host 编辑器同一套观感） */
+.bind-presets {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: -2px;
+}
+
+.settings .hint.wide {
+  grid-column: 1 / -1;
+}
+
+/* ── v0.2：顶栏图标与悬浮窗（§3.20） ── */
+
+.icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.icon-btn.active {
+  color: var(--text);
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+
+/* 结果横幅：主页面一份、悬浮窗内一份，`v-if="!panel"` 保证同一时刻只渲染一处。 */
+.modal-banner {
+  margin: 0 0 12px;
+}
+
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 11, 15, 0.66);
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.modal.wide {
+  width: min(1040px, 100%);
+}
+
+.modal-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-head h2 {
+  margin: 0;
+}
+
+.modal-body {
+  overflow: auto;
+  padding: 16px 18px 20px;
+}
+
+.modal-body h3:first-child {
+  margin-top: 0;
+}
+
+h3 small {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+

@@ -1,0 +1,18 @@
+[package]
+name = "dsh-housing-webhook"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "dsh-housing webhook 投递：配置 / 模板渲染 / WinHTTP POST / 有界队列（内核之外的业务编译单元）"
+
+[dependencies]
+# 依赖方向：core → webhook（docs/structure.md §2.1）。本 crate 不认识 core，也不知道实例状态机。
+serde.workspace = true
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    # HTTP 客户端用系统 WinHTTP：TLS / 系统证书库 / 系统代理都由 OS 负责（§5.11 D22）
+    "Win32_Networking_WinHttp",
+] }
+
+[dev-dependencies]
+serde_json = "1.0"

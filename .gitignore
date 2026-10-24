@@ -1,0 +1,20 @@
+# ── Rust ──
+/target/
+**/*.rs.bk
+*.pdb
+
+# ── 本地构建 / 运行残留 ──
+*.log
+/logs/
+
+# 运行时数据目录（exe 同级；开发时落在 target\<profile>\ 下）
+.dsh-housing/
+# 一次性探测/临时目录
+/.tmp-*/
+
+
+# ── 编辑器 / 系统 ──
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

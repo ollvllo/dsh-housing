@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>dsh-housing 控制台</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div id="app" v-cloak>
+  <header class="topbar">
+    <div class="brand">dsh-housing <span class="sub">控制台</span></div>
+    <div class="meta">
+      <span class="pill" :class="state &amp;&amp; state.console.port ? 'ok' : 'bad'">
+        端口 {{ state ? (state.console.port || '—') : '—' }}
+      </span>
+      <span class="pill" :class="trayOnline ? 'ok' : 'bad'">
+        托盘 {{ trayOnline ? '在线' : '离线' }}
+      </span>
+      <div class="icon-group">
+        <button class="icon-btn" :class="{ active: panel === 'versions' }"
+                title="管理 dsh 版本（登记 / 移除胶囊）" aria-label="管理 dsh 版本"
+                @click="togglePanel('versions')">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 3 7.5v9L12 21l9-4.5v-9L12 3Z"></path>
+            <path d="M3 7.5 12 12l9-4.5M12 12v9"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" :class="{ active: panel === 'builder' }"
+                title="构建可移植版本（新建一个能起来的 dsh 版本）" aria-label="构建可移植版本"
+                @click="toggleBuilder()">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3v9"></path>
+            <path d="M8 8.5 12 12.5l4-4"></path>
+            <path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" :class="{ active: panel === 'settings' }"
+                title="设置（壳设置 / 登录自启动）" aria-label="设置"
+                @click="togglePanel('settings')">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h7M15 7h5M4 17h5M13 17h7"></path>
+            <circle cx="13" cy="7" r="2"></circle>
+            <circle cx="11" cy="17" r="2"></circle>
+          </svg>
+        </button>
+      </div>
+      <button class="ghost" @click="refresh()" :disabled="loading">刷新</button>
+    </div>
+  </header>
+
+  <div class="banners" v-if="!panel">
+    <p v-if="error" class="banner error">{{ error }}</p>
+    <p v-if="notice" class="banner notice">{{ notice }}</p>
+  </div>
+
+  <main v-if="state">
+    <section class="block">
+      <h2>实例 <small>{{ instances.length }} 个</small></h2>
+      <p class="hint">
+        启动 / 停止 / 日志 / 别名 / env / 端口 / 登录自启都在卡片上；登记与移除胶囊在顶栏的版本图标里。
+      </p>
+      <p v-if="instances.length === 0" class="empty">
+        还没有登记实例。点顶栏的版本图标（管理 dsh 版本）登记一个胶囊目录。
+      </p>
+
+      <article class="card" v-for="instance in instances" :key="instance.key">
+        <div class="card-head">
+          <div class="title">
+            <input class="alias-input" v-model="aliasDrafts[instance.key]"
+                   title="显示名；留空并保存 = 恢复默认名"
+                   placeholder="（未命名）" @keyup.enter="saveAlias(instance)">
+            <span class="key mono">{{ instance.key }}</span>
+          </div>
+          <div class="status">
+            <span class="badge" :class="'state-' + instance.state">{{ stateLabel(instance.state) }}</span>
+            <span class="mono">:{{ instance.port }}</span>
+            <span class="mono" v-if="configFor(instance.key) &amp;&amp; configFor(instance.key).host"
+                  title="显式绑定的 host（--host）">host {{ configFor(instance.key).host }}</span>
+            <span class="mono" v-if="instance.pid">pid {{ instance.pid }}</span>
+          </div>
+        </div>
+
+        <p v-if="instance.detail" class="detail">{{ instance.detail }}</p>
+
+        <div class="metrics" v-if="instance.metrics">
+          <span>CPU {{ formatCpu(instance.metrics.cpu_percent) }}</span>
+          <span>内存 {{ formatBytes(instance.metrics.working_set_bytes) }}</span>
+          <span>峰值 {{ formatBytes(instance.metrics.peak_memory_bytes) }}</span>
+          <span>进程 {{ instance.metrics.process_count }}</span>
+          <span>IO 读 {{ formatBytes(instance.metrics.io_read_bytes) }} / 写 {{ formatBytes(instance.metrics.io_write_bytes) }}</span>
+        </div>
+
+        <div class="actions">
+          <button v-if="canStart(instance)" @click="startInstance(instance)">启动</button>
+          <button v-if="canStop(instance)" class="danger" @click="stopInstance(instance)">停止</button>
+          <button v-if="instance.token_url" @click="openDsh(instance)">打开 dsh 页</button>
+          <button class="ghost" @click="toggleLogs(instance)">
+            {{ logKey === instance.key ? '收起日志' : '日志' }}
+          </button>
+          <button class="ghost" @click="saveAlias(instance)">保存别名</button>
+          <button class="ghost" @click="toggleEnv(instance)">
+            {{ envOpen[instance.key] ? '收起 env' : '编辑 env' }}
+          </button>
+          <button class="ghost" @click="togglePort(instance)">
+            {{ portOpen[instance.key] ? '收起端口' : '改端口' }}
+          </button>
+          <button class="ghost" @click="toggleHost(instance)">
+            {{ hostOpen[instance.key] ? '收起 host' : '改 host' }}
+          </button>
+          <label class="toggle" title="登录 / 启动 core 时自动拉起这个实例">
+            <input type="checkbox"
+                   :checked="Boolean(configFor(instance.key) &amp;&amp; configFor(instance.key).autostart)"
+                   @change="toggleAutostart(instance, $event.target.checked)">
+            登录自启
+          </label>
+          <span class="pending" v-if="pendingRestart[instance.key] !== undefined">已保存，重启后生效</span>
+        </div>
+
+        <div class="port-edit" v-if="portOpen[instance.key]">
+          <input type="number" min="1" max="65535" v-model.number="portDrafts[instance.key]"
+                 class="mono port-input">
+          <button @click="savePort(instance)">保存端口</button>
+          <span class="hint">
+            写登记表，<strong>下次启动生效</strong>；实例运行中不能改。
+            dsh 实际监听端口来自命令行 <code>--port</code>，不是环境变量 <code>DSH_WEB_PORT</code>。
+          </span>
+        </div>
+
+        <div class="port-edit" v-if="hostOpen[instance.key]">
+          <input v-model="hostDrafts[instance.key]" class="mono port-input"
+                 placeholder="留空 = 跟随胶囊配置（不传 --host）">
+          <button @click="saveHost(instance)">保存 host</button>
+          <button class="ghost small" @click="useLoopbackHost(instance)">仅本机 127.0.0.1</button>
+          <button class="ghost small" v-if="lanHost" @click="useLanHost(instance)">局域网 {{ lanHost }}</button>
+          <span class="hint">
+            写登记表，<strong>下次启动生效</strong>；实例运行中不能改。
+            dsh 0.2.x 只接受具体 IP，<code>0.0.0.0</code> 会被拒绝；要局域网可达请填本机具体 IPv4。
+          </span>
+        </div>
+
+        <div class="env" v-if="envOpen[instance.key]">
+          <p v-if="envDrafts[instance.key].length === 0" class="hint">
+            还没有实例级变量。下面的变量会<strong>最后</strong>叠加到启动器复刻的 start.cmd 环境之上。
+          </p>
+          <div class="env-row" v-for="(row, index) in envDrafts[instance.key]" :key="index">
+            <input v-model="row.key" placeholder="变量名" class="env-key mono">
+            <input v-model="row.value" placeholder="值" class="env-value mono">
+            <button class="ghost small" @click="removeEnvRow(instance, index)">删除</button>
+          </div>
+          <div class="env-actions">
+            <button class="ghost small" @click="addEnvRow(instance)">+ 添加变量</button>
+            <button @click="saveEnv(instance)">保存 env</button>
+            <span class="hint">
+              保存后需要重启实例才生效；改 PATH / TEMP / TMP / DSH_HOME 会覆盖启动器默认值。
+            </span>
+          </div>
+          <p v-if="derivedEnvWarning(instance)" class="warn">{{ derivedEnvWarning(instance) }}</p>
+        </div>
+
+        <div class="logs" v-if="logKey === instance.key">
+          <div class="logs-head">
+            <span>
+              日志尾部
+              <template v-if="logSource">（来源：{{ logSource === 'ring' ? '内存缓冲' : (logSource === 'file' ? '日志文件' : '无') }}）</template>
+            </span>
+            <button class="ghost small" @click="closeLogs()">关闭</button>
+          </div>
+          <pre class="log-text">{{ logText || '（还没有输出）' }}</pre>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <p v-else class="empty">正在连接 core…</p>
+
+  <!-- 悬浮窗：管理 dsh 版本（登记 / 移除胶囊） -->
+  <div class="modal-layer" v-if="state &amp;&amp; panel === 'versions'" @click.self="closePanel()">
+    <section class="modal wide" role="dialog" aria-modal="true" aria-labelledby="versions-title">
+      <header class="modal-head">
+        <h2 id="versions-title">管理 dsh 版本 <small>{{ capsules.length }} 个胶囊</small></h2>
+        <button class="icon-btn" title="关闭（Esc）" aria-label="关闭" @click="closePanel()">✕</button>
+      </header>
+      <div class="modal-body">
+        <p v-if="error" class="banner error modal-banner">{{ error }}</p>
+        <p v-if="notice" class="banner notice modal-banner">{{ notice }}</p>
+        <p class="hint mono">登记表：{{ state.registry.data_dir }}\capsules.json</p>
+
+        <h3>登记胶囊</h3>
+        <p class="hint">
+          填胶囊目录（含 <code>instance.json</code> 的那一层）。与托盘「登记胶囊…」是同一条校验路径；重复登记 = 刷新。
+        </p>
+        <div class="register">
+          <input v-model="registerPath" placeholder="E:\my-dsh-versions" class="mono"
+                 @keyup.enter="registerCapsule()">
+          <button @click="registerCapsule()" :disabled="busy || !registerPath.trim()">登记</button>
+        </div>
+
+        <h3>已登记</h3>
+        <p v-if="capsules.length === 0" class="empty">登记表是空的。</p>
+
+        <article class="card capsule" v-for="capsule in capsules" :key="capsule.capsule_id">
+          <div class="card-head">
+            <div class="title">
+              <strong>{{ capsule.capsule_id }}</strong>
+              <span class="mono small">{{ capsule.root }}</span>
+            </div>
+            <div class="status mono small">
+              <span v-if="capsule.runtime">runtime {{ capsule.runtime.version }}</span>
+              <span v-if="capsule.app">app {{ capsule.app.version }}</span>
+            </div>
+          </div>
+
+          <ul class="warnings" v-if="capsule.warnings.length">
+            <li v-for="warning in capsule.warnings" :key="warning">{{ warning }}</li>
+          </ul>
+
+          <table class="config" v-if="capsule.instances.length">
+            <thead>
+              <tr><th>profile</th><th>显示名</th><th>端口</th><th>workspace</th><th>env</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="config in capsule.instances" :key="config.profile">
+                <td>{{ config.profile }}</td>
+                <td>{{ config.alias || '—' }}</td>
+                <td class="mono">{{ config.port }}</td>
+                <td class="mono small">{{ config.workspace }}</td>
+                <td class="mono small">{{ Object.keys(config.env).length }} 个</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="remove">
+            <span class="hint">移除只删这条登记，不碰胶囊目录与日志；有实例在跑会被拒绝。</span>
+            <input v-model="removeConfirm[capsule.capsule_id]"
+                   :placeholder="'输入 ' + capsule.capsule_id + ' 确认'" class="confirm-input">
+            <button class="danger"
+                    :disabled="removeConfirm[capsule.capsule_id] !== capsule.capsule_id"
+                    @click="removeCapsule(capsule)">移除胶囊</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <!-- 悬浮窗：构建可移植版本（v0.5 / #249） -->
+  <div class="modal-layer" v-if="state &amp;&amp; panel === 'builder'" @click.self="closePanel()">
+    <section class="modal wide" role="dialog" aria-modal="true" aria-labelledby="builder-title">
+      <header class="modal-head">
+        <h2 id="builder-title">构建可移植版本 <small>{{ builderBadge }}</small></h2>
+        <button class="icon-btn" title="关闭（Esc）" aria-label="关闭" @click="closePanel()">✕</button>
+      </header>
+      <div class="modal-body">
+        <p v-if="error" class="banner error modal-banner">{{ error }}</p>
+        <p v-if="notice" class="banner notice modal-banner">{{ notice }}</p>
+
+        <h3>配置</h3>
+        <p class="hint">
+          构建 = 建目录骨架 → 下载并双源校验 node → <code>npm install</code> 装 dsh + pnpm → 渲染启动器模板 →
+          写 <code>instance.json</code> → 3 条版本断言 → <strong>自动登记进「管理 dsh 版本」</strong>。
+          一次只跑一个构建；失败不登记，半成品留在磁盘上可重试。不做冒烟（真起服务由你自己验收）。
+        </p>
+
+        <div class="settings" v-if="builderDraft">
+          <label>目录名
+            <input v-model="builderDraft.name" class="mono" placeholder="0.2.1-rc.3-demo">
+            <small>约定 <code>&lt;dsh 版本&gt;-&lt;name&gt;</code>；产物落在 <code>&lt;目标目录&gt;\&lt;目录名&gt;</code></small>
+          </label>
+          <label>dsh 版本
+            <input v-model="builderDraft.dsh" list="builderDshVersions" class="mono" placeholder="0.2.1-rc.3">
+            <small>必须精确版本；下拉来自 npm registry（{{ versionsHint }}）</small>
+          </label>
+          <datalist id="builderDshVersions">
+            <option v-for="version in builderVersions.dsh_versions" :key="version" :value="version"></option>
+          </datalist>
+          <label>node 版本
+            <input v-model="builderDraft.node" list="builderNodeVersions" class="mono" placeholder="v24.22.0">
+            <small>只列 v24 线；运行时已对就复用，不重复下载</small>
+          </label>
+          <datalist id="builderNodeVersions">
+            <option v-for="version in builderVersions.node_versions" :key="version" :value="version"></option>
+          </datalist>
+          <label>档案
+            <select v-model="builderDraft.profile">
+              <option v-for="profile in profileOptions" :key="profile" :value="profile">{{ profile }}</option>
+            </select>
+            <small>dsh 自带的出厂模板；第一次启动时 dsh 自己生成档案</small>
+          </label>
+          <label>端口
+            <input type="number" min="1" max="65535" v-model.number="builderDraft.port" placeholder="自动挑 39410–39450">
+            <small>留空 = 由 housing 挑一个<strong>既没登记、也能绑</strong>的端口</small>
+          </label>
+          <label class="wide">目标目录
+            <input v-model="builderDraft.root" class="mono" placeholder="留空 = dsh-housing.exe 所在目录">
+            <small>产物落在 <code>&lt;目标目录&gt;\&lt;目录名&gt;</code>；默认 = <strong>exe 所在目录</strong>（与 <code>.dsh-housing\</code> 同级），也可以改成任意绝对路径</small>
+          </label>
+          <label class="toggle wide">
+            <input type="checkbox" v-model="builderDraft.overwrite">目标目录已存在且非空时允许继续
+            <small>模板与 <code>instance.json</code> 会被重写，<code>home\</code>（凭据 / 会话）不动</small>
+          </label>
+          <label class="toggle wide">
+            <input type="checkbox" v-model="builderDraft.dry_run">干跑：只打印计划，不联网、不写盘、不跑 npm
+          </label>
+        </div>
+
+        <div class="actions">
+          <button @click="startBuild()" :disabled="busy || builderRunning">开始构建</button>
+          <button v-if="builderRunning" class="danger" @click="cancelBuild()" :disabled="busy">取消</button>
+          <button class="ghost" @click="loadVersions(true)" :disabled="busy">刷新版本列表</button>
+          <span class="hint" v-if="builderRunning">第 {{ builderState.step_index }}/{{ builderState.step_total }} 步：{{ builderState.step_title || '准备中' }}（已用 {{ formatElapsed(builderState.elapsed_ms) }}）</span>
+        </div>
+
+        <p v-if="builderState &amp;&amp; builderState.error" class="warn">{{ builderState.error }}</p>
+        <p v-if="builderResult" class="hint">
+          产物：<code>{{ builderResult.capsule_root }}</code>
+          —— {{ builderResult.registered ? '已登记进「管理 dsh 版本」' : '未登记（干跑或失败）' }}
+        </p>
+
+        <h3>构建日志 <small>{{ builderLogSourceLabel }}</small></h3>
+        <pre class="log-text builder-log">{{ builderLog || '（还没有输出）' }}</pre>
+        <p class="hint mono" v-if="builderState &amp;&amp; builderState.log_path">
+          日志文件：{{ builderState.log_path }}
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <!-- 悬浮窗：设置（壳设置 / 登录自启动） -->
+  <div class="modal-layer" v-if="state &amp;&amp; panel === 'settings'" @click.self="closePanel()">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <header class="modal-head">
+        <h2 id="settings-title">设置</h2>
+        <button class="icon-btn" title="关闭（Esc）" aria-label="关闭" @click="closePanel()">✕</button>
+      </header>
+      <div class="modal-body">
+        <p v-if="error" class="banner error modal-banner">{{ error }}</p>
+        <p v-if="notice" class="banner notice modal-banner">{{ notice }}</p>
+        <h3>壳设置 <small>settings.json（只存启动器自己的偏好）</small></h3>
+        <p class="hint mono">{{ state.settings.settings_path }}</p>
+
+        <div class="settings" v-if="settingsDraft">
+          <label>控制台端口
+            <input type="number" min="0" max="65535" v-model.number="settingsDraft.gui_port">
+            <small>0 = 每次启动随机；<strong>改完要重启 core</strong></small>
+          </label>
+          <!-- v0.4 / #286：控制台启动位置（绑哪张网卡） -->
+          <label class="wide">控制台启动位置
+            <input v-model="settingsDraft.console_host" class="mono" placeholder="127.0.0.1">
+            <small>
+              默认 <code>127.0.0.1</code> = 只有本机能访问；<code>0.0.0.0</code> = 局域网可访问；
+              也可填本机具体 IPv4（只绑那张网卡）。<strong>改完要重启 core</strong>
+            </small>
+          </label>
+          <div class="bind-presets" v-if="settingsDraft">
+            <button type="button" class="ghost small"
+                    @click="settingsDraft.console_host = '127.0.0.1'">仅本机 127.0.0.1</button>
+            <button type="button" class="ghost small"
+                    @click="settingsDraft.console_host = '0.0.0.0'">局域网 0.0.0.0</button>
+            <button type="button" class="ghost small" v-if="lanHost"
+                    @click="settingsDraft.console_host = lanHost">本机 LAN IP {{ lanHost }}</button>
+          </div>
+          <p class="hint wide" v-if="consoleExposed">
+            局域网档下，<strong>同网段任何拿到带 token 链接的设备都能操作控制台</strong>
+            （启停实例、改 env / 端口 / 设置）。控制台没有账号体系，也不走 TLS，请只在信得过的网络里开。
+          </p>
+          <p class="hint wide mono" v-if="consoleLanUrl">
+            局域网访问：{{ consoleLanUrl }}
+            <button type="button" class="ghost small" @click="copyLanConsoleUrl()">复制链接</button>
+          </p>
+          <label>采样间隔（毫秒）
+            <input type="number" min="500" max="60000" v-model.number="settingsDraft.sample_interval_ms">
+          </label>
+          <label>日志保留（天）
+            <input type="number" min="0" max="365" v-model.number="settingsDraft.log_retention_days">
+          </label>
+          <label>托盘重启上限（次）
+            <input type="number" min="1" max="10" v-model.number="settingsDraft.tray_restart_max">
+          </label>
+          <label class="wide">托盘重启退避（毫秒，逗号分隔）
+            <input v-model="settingsDraft.tray_restart_backoff_text" class="mono">
+          </label>
+          <label class="toggle wide">
+            <input type="checkbox" v-model="settingsDraft.auto_open_browser">实例就绪后自动打开浏览器
+          </label>
+          <label class="toggle wide">
+            <input type="checkbox" v-model="settingsDraft.auto_open_console">启动 core 后自动打开控制台
+            <small>默认开；自启动场景可关掉。<strong>改完要重启 core</strong></small>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button @click="saveSettings()" :disabled="busy || !settingsDraft">保存设置</button>
+          <span class="hint">控制台端口与启动位置要重启 core 才生效；其余设置即时生效。</span>
+        </div>
+
+        <p class="hint mono">
+          exe：{{ state.settings.exe_path }}（完整性 {{ state.settings.exe_integrity }}）
+          · core pid {{ state.settings.core_pid }}
+          · 当前控制台端口 {{ state.settings.console_port || '不可用' }}
+        </p>
+
+        <h3>Webhook 通知 <small>实例事件 → HTTP POST（保存后立刻生效）</small></h3>
+        <p class="hint">
+          实例「就绪 / 停止 / 崩溃」与 <strong>dsh-housing 启动（Housing Start）</strong>时，
+          把模板渲染后的正文 <code>POST</code> 到下面这些地址
+          （<code>text/plain; charset=utf-8</code>；串行发送、单次 5 s 超时、传输层失败重试 1 次）。
+          模板占位符：
+          <code v-for="placeholder in state.webhooks.placeholders" :key="placeholder">{{ placeholder }}</code>
+        </p>
+        <p class="hint">
+          <code>{local_url}</code> / <code>{lan_url}</code> 里带访问 token（是有效凭据），
+          只填你信得过的地址；<code>{lan_url}</code> 只在探测到局域网可达时才有值，否则为空。
+          <strong>Housing Start</strong> 的两条 URL 指控制台（不是 dsh 实例）。
+        </p>
+        <p class="hint mono">配置文件：{{ state.webhooks.file_path }}</p>
+
+        <article class="card webhook" v-for="(hook, index) in webhookDrafts" :key="index">
+          <div class="card-head">
+            <div class="title">
+              <input v-model="hook.url" class="mono url-input"
+                     :class="{ bad: !hookUrlOk(hook) }"
+                     placeholder="https://ntfy.sh/my-topic">
+            </div>
+            <div class="status">
+              <label class="toggle">
+                <input type="checkbox" v-model="hook.enabled"> 启用
+              </label>
+              <button class="ghost small" @click="removeWebhook(index)">删除</button>
+            </div>
+          </div>
+
+          <div class="webhook-triggers">
+            <div class="webhook-trigger" v-for="trigger in triggerMeta" :key="trigger.key">
+              <div class="trigger-row">
+                <label class="toggle">
+                  <input type="checkbox" v-model="hook[trigger.key].enabled"> {{ trigger.label }}
+                </label>
+                <button class="ghost small" v-if="hook[trigger.key].enabled"
+                        @click="resetTemplate(hook, trigger.key)">恢复默认模板</button>
+                <span class="hint" v-if="!hook[trigger.key].enabled">这个条件不发。</span>
+              </div>
+              <textarea v-if="hook[trigger.key].enabled" rows="6" spellcheck="false"
+                        v-model="hook[trigger.key].template"></textarea>
+            </div>
+          </div>
+        </article>
+
+        <p v-if="webhookDrafts &amp;&amp; webhookDrafts.length === 0" class="empty">
+          还没有 webhook。点下面的「添加 webhook」新建一条（会带上三个条件的默认模板）。
+        </p>
+
+        <div class="actions">
+          <button class="ghost" @click="addWebhook()" :disabled="busy || webhookDrafts === null">+ 添加 webhook</button>
+          <button @click="saveWebhooks()" :disabled="busy || webhookDrafts === null">保存 webhook</button>
+          <span class="hint">全量替换：删掉的条目保存后就真删了。</span>
+        </div>
+
+        <h3>登录自启动</h3>
+        <p class="hint">
+          任务计划 <code>{{ state.autostart.task_name }}</code>：<strong>{{ autostartLabel }}</strong>
+          <template v-if="state.autostart.detail">（{{ state.autostart.detail }}）</template>
+          <template v-if="state.autostart.legacy">；旧链路任务 <code>dsh-start</code>：{{ state.autostart.legacy }}</template>
+        </p>
+        <div class="actions">
+          <button v-if="state.autostart.state !== 'enabled'"
+                  :disabled="busy || !state.autostart.can_enable"
+                  @click="enableAutostart()">启用登录自启动</button>
+          <button v-else class="danger" :disabled="busy" @click="disableAutostart()">停用并回滚</button>
+          <span class="hint" v-if="!state.autostart.can_enable">
+            当前完整性级别 {{ state.settings.exe_integrity }} 低于 medium：这样起的托盘会被 UIPI 拒，
+            先把 exe 换到不带 Low 标签的目录再启用。
+          </span>
+        </div>
+        <p class="hint">
+          启用后由任务计划在登录时拉起 core（InteractiveToken，保住 logon SID），标记「登录自启」的实例会跟着起来。
+          停用会删掉 <code>{{ state.autostart.task_name }}</code> 任务，并把被本工具停用的旧链路任务恢复
+          （旧任务定义备份在 <code>.dsh-housing\backup\</code>）。
+        </p>
+      </div>
+    </section>
+  </div>
+</div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

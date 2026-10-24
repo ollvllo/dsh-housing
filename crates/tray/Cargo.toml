@@ -1,0 +1,21 @@
+[package]
+name = "dsh-housing-tray"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "dsh-housing 托盘 UI（Shell_NotifyIconW + 自己的消息循环）"
+
+[dependencies]
+# 依赖规则：本 crate 只允许引用 core 的 `model` / `ipc`（docs/structure.md §2.1）。
+# M1 起托盘通过 `ipc` 客户端请求 core 的状态 / 发命令，并读 `model` 的快照类型。
+dsh-housing-core = { workspace = true }
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",          # WNDCLASSW 的 hbrBackground
+    "Win32_System_LibraryLoader",  # GetModuleHandleW
+    "Win32_UI_Shell",              # Shell_NotifyIconW + SHBrowseForFolderW（登记胶囊）
+    "Win32_UI_Shell_Common",       # BROWSEINFOW 的 ITEMIDLIST
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Com",            # CoInitializeEx / CoTaskMemFree（文件夹选择框）
+    "Win32_System_Threading",      # OpenProcess + WaitForSingleObject（监听 core 退出）
+] }

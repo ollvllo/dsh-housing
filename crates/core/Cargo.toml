@@ -1,0 +1,46 @@
+[package]
+name = "dsh-housing-core"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "dsh-housing 内核：主进程运行时与全部逻辑"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+windows = { workspace = true, features = [
+    # diag.rs：本地时间戳 + 出错弹窗
+    "Win32_Foundation",
+    "Win32_System_SystemInformation",
+    "Win32_UI_WindowsAndMessaging",
+    # runtime.rs：单实例互斥体、进程句柄、会话 ID（命名管道按会话区分）
+    "Win32_System_Threading",
+    "Win32_System_RemoteDesktop",
+    # job.rs：Job Object、匿名管道、console 控制事件
+    "Win32_System_JobObjects",
+    "Win32_System_Pipes",
+    "Win32_System_Console",
+    "Win32_Storage_FileSystem",
+    "Win32_Security",
+    "Win32_System_IO",
+    # monitor.rs：逐 PID 工作集（GetProcessMemoryInfo）
+    "Win32_System_ProcessStatus",
+    # browser.rs：ShellExecuteW 交给默认浏览器
+    "Win32_UI_Shell",
+    # console.rs：BCryptGenRandom 生成每次启动一换的 consoleToken
+    "Win32_Security_Cryptography",
+    # autostart.rs（M4）：任务计划 COM（ITaskService / ITaskDefinition / IRegisteredTask）
+    "Win32_System_TaskScheduler",
+    "Win32_System_Com",
+] }
+
+[dependencies.dsh-housing-gui]
+workspace = true
+
+# v0.2 webhook（#244）：投递在核外，core 只做事件源（docs/structure.md §5.11 D21）
+[dependencies.dsh-housing-webhook]
+workspace = true
+
+# v0.5 builder（#249）：构建业务在核外，core 只做线程 / Job / 日志环 / 登记（§5.14 D37/D38）
+[dependencies.dsh-housing-builder]
+workspace = true

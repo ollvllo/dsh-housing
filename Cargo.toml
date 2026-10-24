@@ -1,0 +1,35 @@
+# dsh-housing —— Cargo workspace（docs/structure.md §2.1）
+#
+# 依赖方向是硬规则，不要违反：
+#   app → {core, tray}；core → {gui, webhook, builder}；tray -.→ core（只取 model / ipc，虚线＝不取运行时逻辑）
+[workspace]
+resolver = "2"
+members = ["crates/app", "crates/core", "crates/gui", "crates/tray", "crates/webhook", "crates/builder"]
+
+[workspace.package]
+# v0.4：与 docs 的版本口径对齐（Housing Start 的 {dsh_version} 与 exe 属性都读它，§5.13 D36）
+version = "0.4.0"
+edition = "2021"
+
+[workspace.dependencies]
+dsh-housing-core = { path = "crates/core" }
+dsh-housing-gui = { path = "crates/gui" }
+dsh-housing-tray = { path = "crates/tray" }
+# v0.2 webhook（#244）：投递在核外的业务编译单元（§5.11 D21）
+dsh-housing-webhook = { path = "crates/webhook" }
+# v0.5 builder（#249）：可移植版本构建在核外的业务编译单元（§5.14 D37/D38）
+dsh-housing-builder = { path = "crates/builder" }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# 只按需开 feature，不引整包（docs/structure.md §2.3）
+windows = "0.58"
+# M3 控制台（§5.8 D1）：axum 只作 HTTP 解析 / 路由，tokio 只在 gui crate 的一个专用线程里
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "query"] }
+tokio = { version = "1", default-features = false, features = ["rt", "net", "time", "sync"] }
+# 编译期把 crates/gui/web/ 整个目录编进 exe（§5.8 D2）
+include_dir = "0.7"
+
+[profile.release]
+# 关键边界要能 catch_unwind 后落盘（docs/structure.md §5.1「core 是单点」）
+panic = "unwind"
