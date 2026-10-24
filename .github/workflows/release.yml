@@ -1,0 +1,93 @@
+# 打 tag（v*）→ 交叉编译 3 个 Windows 架构 → 自动发到 GitHub Release。
+#
+# 为什么整条流程都在 windows 上：本项目只依赖 Win32 API（windows crate：
+# 任务计划 COM / WinHTTP / Shell_NotifyIconW），且 build.rs 要调 Windows SDK
+# 的 rc.exe 编图标，ubuntu runner 上根本编不过。
+#
+# 为什么三个架构都在同一台 x64 runner 上：runs-on 选的是「哪台机器跑 job」，
+# 不是「编出什么架构」。runner 装了 VC.Tools.x86.x64 与 VC.Tools.ARM64，
+# 用 rustup target add + cargo build --target 交叉编译即可。
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # 建 release、上传资产需要；默认 token 是只读
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN_NAME: dsh-housing
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false # 一个架构失败不影响其它两个，便于一次看全
+      matrix:
+        include:
+          # Windows 11 x64（绝大多数人下载这个）
+          - target: x86_64-pc-windows-msvc
+            asset: dsh-housing-x86_64.exe
+          # 32 位：Win11 x64 上走 WoW64，Win11 ARM64 上走 x86 模拟
+          - target: i686-pc-windows-msvc
+            asset: dsh-housing-x86.exe
+          # Windows 11 ARM64 原生
+          - target: aarch64-pc-windows-msvc
+            asset: dsh-housing-aarch64.exe
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 版本号与 tag 对齐
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          $m = Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1
+          $ver = $m.Matches[0].Groups[1].Value
+          Write-Host "tag = $tag / Cargo.toml = $ver"
+          if ($tag -ne $ver) { throw "tag 与 Cargo.toml [workspace.package] version 不一致，拒绝发布" }
+
+      - name: 安装目标架构的 std
+        run: rustup target add ${{ matrix.target }}
+
+      - name: 编译 release
+        run: cargo build --locked --release --target ${{ matrix.target }}
+
+      - name: 收集产物
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/$env:BIN_NAME.exe" "dist/${{ matrix.asset }}"
+          Copy-Item LICENSE dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: "*.exe" # 匹配上面三个 artifact 名
+          path: dist
+          merge-multiple: true
+
+      - name: 列出待发布资产
+        shell: pwsh
+        run: Get-ChildItem dist | Select-Object Name, Length
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/*.exe
